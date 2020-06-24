@@ -23,12 +23,14 @@ logging.basicConfig(level=logging.DEBUG, format="%(asctime)s [%(levelname)s]: %(
 
 logging.info("Application started")
 
-fsm = CHFSM(RED_LED_PIN, GREN_LED_PIN, BLUE_LED_PIN, HW_RELAY_PIN, CH_RELAY_PIN, HW_SWITCH_PIN, CH_SWITCH_PIN, RGB_ACTIVE_HIGH, CH_RELAY_ACTIVE_HIGH, HW_RELAY_ACTIVE_HIGH)
-
-
-while 1:
-    fsm.process()
-    sleep(1)
+try:
+    fsm = CHFSM(RED_LED_PIN, GREN_LED_PIN, BLUE_LED_PIN, HW_RELAY_PIN, CH_RELAY_PIN, HW_SWITCH_PIN, CH_SWITCH_PIN, RGB_ACTIVE_HIGH, CH_RELAY_ACTIVE_HIGH, HW_RELAY_ACTIVE_HIGH)
+    while 1:
+        fsm.process()
+        sleep(0.1)
+except Exception as e:
+    logging.exception("Unhandled exception - '%s'", str(e))
+    # We should shutdown to prevent issues
 
 
 

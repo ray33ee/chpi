@@ -1,3 +1,14 @@
+Version 1.0.2
+	- Boost time log entry now shows duration correctly, in minutes
+	- CH and HW being turned off by schedule is now logged
+	- On time, off time, on colour and off colour required when pulsing LED for more control
+	- BetterButton class added for more control over button functionalty
+	- The colour tuple now includes duration
+	- More logical status colouring
+	- State process is broken up into functions
+	- NoSchedule state implemented
+	- Update state created
+	
 Version 1.0.1
 	- We now use the J8 header pin numbers, not the BCM numbers
 	- Command file now uses JSON format
