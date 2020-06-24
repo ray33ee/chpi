@@ -1,4 +1,5 @@
 commands
 schedule
-schedule.bin
-test.py
+backup command file
+chatsch.csv
+*.log

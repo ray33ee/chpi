@@ -1,7 +1,9 @@
 from gpiozero import RGBLED, Button, DigitalOutputDevice
 
 from datetime import datetime
-from logger import Logger
+import logging
+
+import json
 
 class CHFSM:
     
@@ -38,9 +40,6 @@ class CHFSM:
         self.ch_button.when_pressed = self.chPressed
         self.hw_button.when_pressed = self.hwPressed
         
-        # Create log object
-        self.logger = Logger(self)
-        
         # Setup CH and HW boost objects
         self.ch_boost_start = None
         self.hw_boost_start = None
@@ -66,11 +65,11 @@ class CHFSM:
         return self.state
     
     def chPressed(self):
-        self.logger.log("CH button press")
+        logging.debug("CH button press")
         self.ch_pressed_flag = True
     
     def hwPressed(self):
-        self.logger.log("HW button press")
+        logging.debug("HW button press")
         self.hw_pressed_flag = True
         
     def setStatusLed(self, colour):
@@ -84,7 +83,7 @@ class State:
         
     
     def process(self):
-        print("State process")
+        print(".", end='')
         
         nextState = IdleState(self)
         
@@ -94,17 +93,21 @@ class State:
         # Check to see if either buttons have been pressed
         if self.fsm.ch_pressed_flag:
             if not self.fsm.ch_boost_start: # IF there is no timer set, set one
+                logging.info("CH boost started (%f minutes)", self.fsm.BOOST_DURATION)
                 stateCode |= 1
                 self.fsm.ch_boost_start = datetime.now()
             else: # If a timer is already set, cancel it
+                logging.info("CH boost cancelled")
                 self.fsm.ch_boost_start = None
             self.fsm.ch_pressed_flag = False
          
         if self.fsm.hw_pressed_flag:
             if not self.fsm.hw_boost_start:
+                logging.info("HW boost started (%f minutes)", self.fsm.BOOST_DURATION)
                 stateCode |= 2
                 self.fsm.hw_boost_start = datetime.now()
             else:
+                logging.info("HW boost cancelled")
                 self.fsm.hw_boost_start = None
             self.fsm.hw_pressed_flag = False
         
@@ -114,6 +117,7 @@ class State:
             if diff.seconds < self.fsm.BOOST_DURATION: # If we are within the boost time
                 stateCode |= 1
             else:
+                logging.info("CH boost expired")
                 self.fsm.ch_boost_start = None
         
         if self.fsm.hw_boost_start:
@@ -121,6 +125,7 @@ class State:
             if diff.seconds < self.fsm.BOOST_DURATION:
                 stateCode |= 2 
             else:
+                logging.info("HW boost expired")
                 self.fsm.hw_boost_start = None
             
         
@@ -128,8 +133,6 @@ class State:
         current_time = datetime.now()
         
         index = (current_time.weekday() * 24 + current_time.hour) * 60 + current_time.minute
-        
-        print(index)
         
         fh = open("schedule", "rb")
         
@@ -139,12 +142,28 @@ class State:
         
         fh.close()
         
-        stateCode |= entry & 3
+        CHHW = entry & 3
+        
+        stateCode |= CHHW
+        
+        
+            
         
         # Check command file to see if either CH or HW commands are present
         fh = open("commands", "r+")
         
         commands = fh.read()
+        
+        if len(commands):
+            data = json.loads(commands)
+            
+            print(json.dumps(commands, indent=4))
+            
+            fh.close()
+        
+            fh = open("commands", "w")
+            
+            logging.info("Commands received %s", commands)
             
         fh.close()
         
@@ -161,6 +180,13 @@ class State:
         # Only set state if it has changed
         if type(nextState) != type(self.fsm.getState()):
             self.fsm.setState(nextState)
+            
+            if CHHW == 1:
+                logging.info("CH schedule on")
+            elif CHHW == 2:
+                logging.info("HW schedule on")
+            elif CHHW == 3:
+                logging.info("CH and HW schedule on")
         
     
     def leave(self):
@@ -173,7 +199,7 @@ class IdleState(State):
         self.fsm = fsm
     
     def enter(self):
-        self.fsm.logger.log("Idle Enter")
+        logging.debug("Idle Enter")
         
         # Turn both relays off
         self.fsm.hw_relay.off()
@@ -189,7 +215,7 @@ class CHState(State):
         self.fsm = fsm
     
     def enter(self):
-        self.fsm.logger.log("CH Enter")
+        logging.debug("CH Enter")
         
         # Turn CH relay on and HW relay off
         self.fsm.hw_relay.off()
@@ -206,7 +232,7 @@ class HWState(State):
         pass
     
     def enter(self):
-        self.fsm.logger.log("HW Enter")
+        logging.debug("HW Enter")
         
         # Turn both CH off and HW relay on
         self.fsm.hw_relay.on()
@@ -222,7 +248,7 @@ class BothState(State):
         self.fsm = fsm
     
     def enter(self):
-        self.fsm.logger.log("Both Enter")
+        logging.debug("HW and CH Enter")
         
         # Turn both relays on
         self.fsm.hw_relay.on()

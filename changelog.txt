@@ -1,2 +1,10 @@
+Version 1.0.1
+	- We now use the J8 header pin numbers, not the BCM numbers
+	- Command file now uses JSON format
+	- logging class is now used for logging events (removed user defined logger class)
+	- Extra log entries added for increased verbosity
+	- Updated .gitignore
+	- Comands are extracted from command file (then the file is cleared)
+	
 Version 1.0.0
 	- Initial commit
