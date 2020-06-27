@@ -9,6 +9,11 @@ import json
 
 import os
 
+files_folder = os.path.join(os.path.dirname(os.path.dirname(__file__)), "files")
+
+commands_path = os.path.join(files_folder, "commands")
+schedule_path = os.path.join(files_folder, "schedule")
+
 class CHFSM:
     
     # Normal operation
@@ -32,7 +37,7 @@ class CHFSM:
     BUTTON_BOUNCE_TIME = None
     
     # The duration of a CH or HW boost, in seconds
-    BOOST_DURATION = 10
+    BOOST_DURATION = 60 * 15
     
     def __init__(self, red, green, blue, hw_relay, ch_relay, hw_button, ch_button, rgb_active_high, ch_relay_active_high, hw_relay_active_high):
         
@@ -47,10 +52,6 @@ class CHFSM:
         # Setup RGB status LED
         self.status_led = RGBLED(red, green, blue, active_high=rgb_active_high)
         
-        # Connect button press events 
-        #self.ch_button.when_pressed = 
-        #self.hw_button.when_pressed = self.hwPressed
-        
         # Setup CH and HW boost objects
         self.ch_boost_start = None
         self.hw_boost_start = None
@@ -62,11 +63,15 @@ class CHFSM:
         self.state = IdleState(self)
         self.state.enter()
 
-        
+    def close(self):
+        self.status_led.close()
+        self.hw_relay.close()
+        self.ch_relay.close()
     
     def setState(self, state):
         self.state.leave()
         self.state = state
+        logging.debug("State change: %s", type(state))
         self.state.enter()
         
     def process(self):
@@ -85,6 +90,9 @@ class CHFSM:
         
     def setStatusLed(self, colour):
         self.status_led.pulse(colour[0], colour[1], off_color=colour[2], on_color=colour[3])
+        
+    def parent_folder():
+        return os.path.dirname(os.path.dirname(__file__))
         
     
 class State:
@@ -140,7 +148,7 @@ class State:
         
         index = (current_time.weekday() * 24 + current_time.hour) * 60 + current_time.minute
         
-        fh = open("schedule", "rb")
+        fh = open(schedule_path, "rb")
         
         fh.seek(index)
         
@@ -148,7 +156,7 @@ class State:
         
         fh.close()
         
-        CHHW = entry & 3
+        CHHW = entry & 3 # Get the first two bits of information from the status byte
         
         return CHHW
     
@@ -156,7 +164,7 @@ class State:
         stateCode = 0
         
         # Check command file to see if either CH or HW commands are present
-        fh = open("commands", "r+")
+        fh = open(commands_path, "r+")
         
         commands = fh.read()
         
@@ -167,7 +175,7 @@ class State:
             
             fh.close()
         
-            fh = open("commands", "w")
+            fh = open(commands_path, "w")
             
             logging.info("Commands received %s", commands)
             
@@ -176,7 +184,6 @@ class State:
         return stateCode
     
     def process(self):
-        print(".", end='')
         
         #nextState = State(self.fsm)
         
@@ -186,14 +193,14 @@ class State:
         stateCode |= self.buttonProcess()
             
         # Make sure schedule file exists and is valid
-        if not os.path.isfile("schedule"):
+        if not os.path.isfile(schedule_path):
             self.fsm.setState(NoSchedule(self.fsm))
             return  
         
         stateCode |= self.scheduleProcess()
         
-        if not os.path.isfile("commands"):
-            fh = open("commands", "wb")
+        if not os.path.isfile(commands_path):
+            fh = open(commands_path, "wb")
             fh.close()
         
         stateCode |= self.commandProcess()
@@ -314,7 +321,7 @@ class NoSchedule:
     def process(self):
         
         # Check to see if schedule file exists. If it does, change state to idle
-        if os.path.isfile("schedule"):
+        if os.path.isfile(schedule_path):
             self.fsm.setState(IdleState(self.fsm))
             logging.info("Schedule file found")
             

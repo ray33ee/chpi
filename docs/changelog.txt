@@ -1,3 +1,12 @@
+Version 1.0.3
+	- Exceptions will result in the LED pulsing red
+	- Files are structured in folders
+	- DiagPrint will periodically print diagnostic information to log file
+	- __file__ is used to  get the working directory
+	- We now ping the default gateway
+	- Logs are separated by month, and logs are entered into their own folder
+	- Automatic update and reboot implemented
+
 Version 1.0.2
 	- Boost time log entry now shows duration correctly, in minutes
 	- CH and HW being turned off by schedule is now logged

@@ -1,5 +1,3 @@
-commands
-schedule
-backup command file
-chatsch.csv
-*.log
+files
+logs
+scripts/tmp
