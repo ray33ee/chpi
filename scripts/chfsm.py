@@ -3,16 +3,12 @@ from gpiozero import RGBLED, Button, DigitalOutputDevice
 from better import BetterButton
 
 from datetime import datetime
+
 import logging
 
 import json
 
 import os
-
-files_folder = os.path.join(os.path.dirname(os.path.dirname(__file__)), "files")
-
-commands_path = os.path.join(files_folder, "commands")
-schedule_path = os.path.join(files_folder, "schedule")
 
 class CHFSM:
     
@@ -26,10 +22,14 @@ class CHFSM:
     # Errors
     NO_WIFI_CONNECTION = (1.5, 1.5, (1,0,0), (0.9, 0, 0.9)) # Red to purple
     SCHEDULE_MISSING = (1.5, 1.5, (1,0,0), (1, 0.3, 0.0)) # red to yellow/orange
+    BAD_SCHEDULE = (1.5, 1.5, (1,0,0), (1, 1, 0)) # red to cyan
     
     # Maintainance mode
     BLUETOOTH_MODE = (1.5, 1.5, (0,0,1), (0, 1, 1)) # blue to cyan
     UPDATING = (1.5, 1.5, (0, 0, 1), (0, 1, 0)) #blue to Green
+    
+    # Update and reboot time (day_of_month, hour, minute, second)
+    UPDATE_REBOOT_TIME = (1, 0, 0, 0)
     
     PULSE_UP_TIME = 1.5
     PULSE_DOWN_TIME = 1.5
@@ -51,6 +51,11 @@ class CHFSM:
 
         # Setup RGB status LED
         self.status_led = RGBLED(red, green, blue, active_high=rgb_active_high)
+        
+        self.files_folder_path = os.path.join(CHFSM.parent_folder(), "files")
+
+        self.commands_file_path = os.path.join(self.files_folder_path, "commands")
+        self.schedule_file_path = os.path.join(self.files_folder_path, "schedule")
         
         # Setup CH and HW boost objects
         self.ch_boost_start = None
@@ -94,6 +99,7 @@ class CHFSM:
     def parent_folder():
         return os.path.dirname(os.path.dirname(__file__))
         
+    
     
 class State:
     
@@ -148,7 +154,7 @@ class State:
         
         index = (current_time.weekday() * 24 + current_time.hour) * 60 + current_time.minute
         
-        fh = open(schedule_path, "rb")
+        fh = open(self.fsm.schedule_file_path, "rb")
         
         fh.seek(index)
         
@@ -164,7 +170,7 @@ class State:
         stateCode = 0
         
         # Check command file to see if either CH or HW commands are present
-        fh = open(commands_path, "r+")
+        fh = open(self.fsm.commands_file_path, "r+")
         
         commands = fh.read()
         
@@ -175,7 +181,7 @@ class State:
             
             fh.close()
         
-            fh = open(commands_path, "w")
+            fh = open(self.fsm.commands_file_path, "w")
             
             logging.info("Commands received %s", commands)
             
@@ -187,20 +193,33 @@ class State:
         
         #nextState = State(self.fsm)
         
+        # First we check the time to see if we should update
+        current_time = datetime.now()
+
+        
+        if current_time.day == UPDATE_REBOOT_TIME[0] and current_time.hour == UPDATE_REBOOT_TIME[1] and current_time.minute == UPDATE_REBOOT_TIME[2] and current_time.second == UPDATE_REBOOT_TIME[3]:
+            self.fsm.setState(Update(self.fsm))
+            return
+        
         # We use stateCode to determine which relays should be set, then use this to change state (if needed)
         stateCode = 0
         
         stateCode |= self.buttonProcess()
             
         # Make sure schedule file exists and is valid
-        if not os.path.isfile(schedule_path):
+        if not os.path.isfile(self.fsm.schedule_file_path):
             self.fsm.setState(NoSchedule(self.fsm))
-            return  
+            return
+        
+        # If the schedule file exists, make sure it is the right size
+        if os.path.getsize(self.fsm.schedule_file_path) != 7 * 24 * 60:
+            self.fsm.setState(BadSchedule(self.fsm))
+            return
         
         stateCode |= self.scheduleProcess()
         
-        if not os.path.isfile(commands_path):
-            fh = open(commands_path, "wb")
+        if not os.path.isfile(self.fsm.commands_file_path):
+            fh = open(self.fsm.commands_file_path, "wb")
             fh.close()
         
         stateCode |= self.commandProcess()
@@ -300,30 +319,23 @@ class BothState(State):
         
         # Change status led to inditate HW and CH are on
         self.fsm.setStatusLed(CHFSM.CH_AND_HW_COLOUR)
-    
 
-class NoSchedule:
+class ScheduleIssue:
     
     def __init__(self, fsm):
         self.fsm = fsm
         
     def enter(self):
-        logging.debug("No Schedule Enter")
-        logging.warning("Schedule file not found! Please create a schedule file")
+        
         
         # Turn both relays off
         self.fsm.hw_relay.off()
         self.fsm.ch_relay.off()
         
-        # Change status led to inditate idle
-        self.fsm.setStatusLed(CHFSM.SCHEDULE_MISSING)
         
     def process(self):
         
-        # Check to see if schedule file exists. If it does, change state to idle
-        if os.path.isfile(schedule_path):
-            self.fsm.setState(IdleState(self.fsm))
-            logging.info("Schedule file found")
+        
             
         # Check commands file and buttons as usual
         stateCode = 0
@@ -350,8 +362,55 @@ class NoSchedule:
         
         
         
+class BadSchedule(ScheduleIssue):
+    
+    def __init__(self, fsm):
+        self.fsm = fsm
         
+    def enter(self):
+        logging.debug("Bad Schedule Enter")
+        logging.warning("Bad schedule file! Please create a valid schedule file")
         
+        # Change status led to inditate idle
+        self.fsm.setStatusLed(CHFSM.BAD_SCHEDULE)
+        
+        super().enter()
+        
+    def process(self):
+        # Check to see if schedule file exists. If it does not, change to noschedule state
+        if not os.path.isfile(self.fsm.schedule_file_path):
+            self.fsm.setState(NoSchedule(self.fsm))
+        else:
+            if os.path.getsize(self.fsm.schedule_file_path) == 7 * 24 * 60:
+                self.fsm.setState(IdleState(self.fsm))
+                logging.info("Valid schedule file found")
+        
+        super().process()   
+        
+
+class NoSchedule(ScheduleIssue):
+    
+    def __init__(self, fsm):
+        self.fsm = fsm
+        
+    def enter(self):
+        logging.debug("No Schedule Enter")
+        logging.warning("Schedule file not found! Please create a schedule file")
+        
+        # Change status led to inditate idle
+        self.fsm.setStatusLed(CHFSM.SCHEDULE_MISSING)
+        
+        super().enter()
+        
+    def process(self):
+        # Check to see if schedule file exists. If it does, change state to idle
+        if os.path.isfile(self.fsm.schedule_file_path):
+            self.fsm.setState(IdleState(self.fsm))
+            logging.info("Schedule file found")
+        
+        super().process()
+
+
 class Update:
     
     def __init__(self, fsm):
@@ -362,19 +421,25 @@ class Update:
         # Change light
         self.fsm.setStatusLed(CHFSM.UPDATING)
         
-        # Update pi
+        # Turn relays off
+        self.fsm.hw_relay.off()
+        self.fsm.ch_relay.off()
         
-        # restart pi
-        pass
+        # Update, upgrade and reboot        
+        logging.info("Updating pi...")
+        os.system("sudo apt update -y")
+        
+        logging.info("Upgrading pi...")
+        os.system("sudo apt full-upgrade -y")
+        
+        self.fsm.status_led.off()
+        
+        logging.info("Rebooting pi...")
+        os.system("sudo shutdown -r now")
+        
     
     def process(self):
         pass
-    
-    
-    
-    
-    
-    
     
     
     

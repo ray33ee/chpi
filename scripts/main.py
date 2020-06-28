@@ -57,18 +57,6 @@ try:
         
         diag.process()
         
-        if current_time.day == 1 and current_time.hour == 0 and current_time.minute == 0 and current_time.second == 0:
-            # At the very first day of the month we update, reboot, and (as a result of the reboot) start a new log file. (though not necessarily in that order)
-            
-            logging.info("Updating pi...")
-            os.system("sudo apt update -y")
-            
-            logging.info("Upgrading pi...")
-            os.system("sudo apt full-upgrade -y")
-            
-            logging.info("Rebooting pi...")
-            os.system("sudo shutdown -r now")
-        
         sleep(TICK_DURATION)
         
         

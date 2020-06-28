@@ -7,6 +7,8 @@ import logging
 
 from gateway import Gateway
 
+import os
+
 class DiagPrint:
     
     def __init__(self, duration):
@@ -25,7 +27,23 @@ class DiagPrint:
             
             load = LoadAverage().load_average
             
-            data = {"ping gateway": gateway, "ping response": ping, "temperature": temp, "average load": load}
+            pid = os.getpid()
+            
+            ppid = os.getppid()
+            
+            data = {
+                "pid": pid,
+                "parent pid": ppid,
+                "ping gateway": gateway,
+                "ping response": ping,
+                "temperature": temp,
+                "average load": load
+                }
             
             logging.debug("Diagnostics: %s", str(data))
             self.start_time = datetime.now()
+            
+            
+            
+            
+            

@@ -1,3 +1,11 @@
+Version 1.0.4
+	- All statements that require __files__ now use CHFSM.parent_folder()
+	- Update, upgrade and reboot code moved to Update state
+	- We now use NoSchedule and BadSchedule which, in turn, inherit from ScheduleIssue
+	- The size of the schedule file is verified
+	- pid and ppid are now included in diagprint
+	- Update and reboot time now stored as tuple
+
 Version 1.0.3
 	- Exceptions will result in the LED pulsing red
 	- Files are structured in folders
