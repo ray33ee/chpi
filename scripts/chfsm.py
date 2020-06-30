@@ -4,6 +4,8 @@ from better import BetterButton
 
 from datetime import datetime
 
+from diagprint import DiagPrint
+
 import logging
 
 import json
@@ -57,9 +59,9 @@ class CHFSM:
         self.commands_file_path = os.path.join(self.files_folder_path, "commands")
         self.schedule_file_path = os.path.join(self.files_folder_path, "schedule")
         
-        # Setup CH and HW boost objects
-        self.ch_boost_start = None
+        # Setup HW boost objects
         self.hw_boost_start = None
+        self.ch_boost_on = False
         
         self.hw_pressed_flag = False
         self.ch_pressed_flag = False
@@ -110,33 +112,26 @@ class State:
         stateCode = 0
         # Check to see if either buttons have been pressed
         if self.fsm.ch_pressed_flag:
-            if not self.fsm.ch_boost_start: # IF there is no timer set, set one
-                logging.info("CH boost started (%f minutes)", self.fsm.BOOST_DURATION / 60.0)
+            if not self.fsm.ch_boost_on:
+                logging.info("CH boost started (button)")
                 stateCode |= 1
-                self.fsm.ch_boost_start = datetime.now()
-            else: # If a timer is already set, cancel it
-                logging.info("CH boost cancelled")
-                self.fsm.ch_boost_start = None
+            else:
+                logging.info("CH boost cancelled (button)")
+            self.fsm.ch_boost_on = not self.fsm.ch_boost_on
             self.fsm.ch_pressed_flag = False
          
         if self.fsm.hw_pressed_flag:
             if not self.fsm.hw_boost_start:
-                logging.info("HW boost started (%f minutes)", self.fsm.BOOST_DURATION / 60.0)
+                logging.info("HW boost started (button, %f minutes)", self.fsm.BOOST_DURATION / 60.0)
                 stateCode |= 2
                 self.fsm.hw_boost_start = datetime.now()
             else:
-                logging.info("HW boost cancelled")
+                logging.info("HW boost cancelled (button)")
                 self.fsm.hw_boost_start = None
             self.fsm.hw_pressed_flag = False
-        
-        # If we are within the boost time, update stateCode accordingly
-        if self.fsm.ch_boost_start: # If a start time is set
-            diff = datetime.now() - self.fsm.ch_boost_start
-            if diff.seconds < self.fsm.BOOST_DURATION: # If we are within the boost time
-                stateCode |= 1
-            else:
-                logging.info("CH boost expired")
-                self.fsm.ch_boost_start = None
+            
+        if self.fsm.ch_boost_on:
+            stateCode |= 1
         
         if self.fsm.hw_boost_start:
             diff = datetime.now() - self.fsm.hw_boost_start
@@ -162,9 +157,11 @@ class State:
         
         fh.close()
         
-        CHHW = entry & 3 # Get the first two bits of information from the status byte
+
         
-        return CHHW
+        
+        
+        return entry
     
     def commandProcess(self):
         stateCode = 0
@@ -174,16 +171,59 @@ class State:
         
         commands = fh.read()
         
+        fh.close()
+        
         if len(commands):
             data = json.loads(commands)
             
-            print(json.dumps(commands, indent=4))
-            
-            fh.close()
-        
             fh = open(self.fsm.commands_file_path, "w")
             
+            command_keys = data.keys()
+            
             logging.info("Commands received %s", commands)
+            
+            if "update" in command_keys:
+                self.fsm.setState(Update(self.fsm))
+                return
+            if "shutdown" in command_keys:
+                logging.info("Shutting down pi...")
+                os.system("sudo shutdown -h now")
+                pass
+            if "reboot" in command_keys:
+                logging.info("Rebooting pi...")
+                os.system("sudo shutdown -r now")
+                pass
+            if "exit" in command_keys:
+                logging.info("Stopping chpi...")
+                self.fsm.hw_relay.off()
+                self.fsm.ch_relay.off()
+                
+                os.system("sudo kill " + str(os.getpid()))
+                
+                pass
+            if "reload" in command_keys:
+                logging.info("Reloading chpi...")
+                pass
+            if "ch" in command_keys:
+                if not self.fsm.ch_boost_on:
+                    logging.info("CH boost started (command)")
+                    stateCode |= 1
+                else:
+                    logging.info("CH boost cancelled (command)")
+                self.fsm.ch_boost_on = not self.fsm.ch_boost_on
+            if "hw" in command_keys:
+                if not self.fsm.hw_boost_start:
+                    logging.info("HW boost started (command, %f minutes)", self.fsm.BOOST_DURATION / 60.0)
+                    stateCode |= 2
+                    self.fsm.hw_boost_start = datetime.now()
+                else:
+                    logging.info("HW boost cancelled (command)")
+                    self.fsm.hw_boost_start = None
+            if "diagnostics" in command_keys:
+                DiagPrint.println()
+        
+            
+            
             
         fh.close()
         
@@ -197,7 +237,7 @@ class State:
         current_time = datetime.now()
 
         
-        if current_time.day == UPDATE_REBOOT_TIME[0] and current_time.hour == UPDATE_REBOOT_TIME[1] and current_time.minute == UPDATE_REBOOT_TIME[2] and current_time.second == UPDATE_REBOOT_TIME[3]:
+        if current_time.day == CHFSM.UPDATE_REBOOT_TIME[0] and current_time.hour == CHFSM.UPDATE_REBOOT_TIME[1] and current_time.minute == CHFSM.UPDATE_REBOOT_TIME[2] and current_time.second == CHFSM.UPDATE_REBOOT_TIME[3]:
             self.fsm.setState(Update(self.fsm))
             return
         
@@ -216,7 +256,15 @@ class State:
             self.fsm.setState(BadSchedule(self.fsm))
             return
         
-        stateCode |= self.scheduleProcess()
+        schedule = self.scheduleProcess()
+        
+        # Fourth bit represents the emergency off state. This will set the current state to idle
+        if schedule & 4 and (0 <= current_time.second <= 1):
+            self.fsm.ch_boost_on = False
+            return
+        
+        
+        stateCode |= schedule & 3
         
         if not os.path.isfile(self.fsm.commands_file_path):
             fh = open(self.fsm.commands_file_path, "wb")

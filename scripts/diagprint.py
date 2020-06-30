@@ -15,32 +15,35 @@ class DiagPrint:
         self.start_time = datetime.now()
         self.duration = duration
         
+    def println():
+        gateway = Gateway.gateway()
+            
+        ping = PingServer(gateway).value
+        
+        temp = CPUTemperature().temperature
+        
+        load = LoadAverage().load_average
+        
+        pid = os.getpid()
+        
+        ppid = os.getppid()
+        
+        data = {
+            "pid": pid,
+            "parent pid": ppid,
+            "ping gateway": gateway,
+            "ping response": ping,
+            "temperature": temp,
+            "average load": load
+            }
+        
+        logging.debug("Diagnostics: %s", str(data))
+        
     def process(self):
         if (datetime.now() - self.start_time).total_seconds() >= self.duration:
             # Temperature, ping and load information
             
-            gateway = Gateway.gateway()
-            
-            ping = PingServer(gateway).value
-            
-            temp = CPUTemperature().temperature
-            
-            load = LoadAverage().load_average
-            
-            pid = os.getpid()
-            
-            ppid = os.getppid()
-            
-            data = {
-                "pid": pid,
-                "parent pid": ppid,
-                "ping gateway": gateway,
-                "ping response": ping,
-                "temperature": temp,
-                "average load": load
-                }
-            
-            logging.debug("Diagnostics: %s", str(data))
+            DiagPrint.println()
             self.start_time = datetime.now()
             
             

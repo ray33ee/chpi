@@ -1,3 +1,13 @@
+Version 1.0.5
+	- Emergency off state added to schedule (turns off CH to prevent it being left on at undesired hours)
+	- CH timer removed
+	- Commands implemented
+	- Fixed update time bug
+	- SIGTERM is now caught, and used to end the program properly
+	- tmp file path is now obtained as an absolute path via __file__
+	- convert.py now supports multiple states
+	- DiagPrint now has separate function that is called by 'diagnostics' command
+
 Version 1.0.4
 	- All statements that require __files__ now use CHFSM.parent_folder()
 	- Update, upgrade and reboot code moved to Update state

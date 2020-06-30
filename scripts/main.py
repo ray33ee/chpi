@@ -13,6 +13,8 @@ from gateway import Gateway
 
 import os
 
+import signal
+
 ######## MUST BE STARTED WITH SUDO
 
 # varsious Pi and circuit-specific constants
@@ -44,10 +46,24 @@ logging.info("Application started")
 
 fsm = CHFSM(RED_LED_PIN, GREN_LED_PIN, BLUE_LED_PIN, HW_RELAY_PIN, CH_RELAY_PIN, HW_SWITCH_PIN, CH_SWITCH_PIN, RGB_ACTIVE_HIGH, CH_RELAY_ACTIVE_HIGH, HW_RELAY_ACTIVE_HIGH)
 
+def sigterm_handler(signum, frame):
+    global fsm
+    logging.info("SIGTERM received...")
+    
+    fsm.close()
+    
+    logging.shutdown()
+    
+    exit()
+    
+    pass
+
+
+signal.signal(signal.SIGTERM, sigterm_handler)
+
 try:
     
     diag = DiagPrint(DIAG_PRINT_DELAY) # Setup DiagPrint to print diagnostics to log file every 5 minutes
-    
     
     while 1:
         

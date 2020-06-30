@@ -10,10 +10,13 @@ import csv
 class Gateway:
     
     def gateway():
+        tmp_path = os.path.join(os.path.join(os.path.dirname(os.path.dirname(__file__)), "files"), "tmp.txt")
         
-        os.system("route > tmp")
+        os.system("route > " + tmp_path)
         
-        res = subprocess.run(["awk '/default/{print $2}' tmp"], capture_output=True, shell=True)
+        res = subprocess.run(["awk '/default/{print $2}' " + tmp_path], capture_output=True, shell=True)
+        
+        os.remove(tmp_path)
         
         output = str(res.stdout.decode('utf-8'))
         

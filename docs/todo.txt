@@ -1,13 +1,6 @@
 
 	- Add readme to project
 	- Properly close devices (pin devices, logger, etc.) on ALL possible program exits
-	- Read and interpret commands in commands file (updating log file for each executed command)
-		- Shutdown
-		- Reboot
-		- Update
-		- Exit program
-		- CH boost
-		- HW boost
-		- Reload program
 	- Config file?
-	- Move 'tmp' file to files and/or delete after use
+	- Remove newline from gateway function
+	- Asynchronously output console output from update and upgrade to log file (new line creates a new message)
