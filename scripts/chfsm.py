@@ -6,6 +6,8 @@ from datetime import datetime
 
 from diagprint import DiagPrint
 
+from gateway import Gateway
+
 import logging
 
 import json
@@ -22,7 +24,7 @@ class CHFSM:
     # INHIBIT_MODE = (1.5, 1.5, (0,0,0), (1, 0, 0.5))  # Off to purple
     
     # Errors
-    NO_WIFI_CONNECTION = (1.5, 1.5, (1,0,0), (0.9, 0, 0.9)) # Red to purple
+    NO_GATEWAY_CONNECTION = (1.5, 1.5, (1,0,0), (0.9, 0, 0.9)) # Red to purple
     SCHEDULE_MISSING = (1.5, 1.5, (1,0,0), (1, 0.3, 0.0)) # red to yellow/orange
     BAD_SCHEDULE = (1.5, 1.5, (1,0,0), (1, 1, 0)) # red to cyan
     
@@ -187,18 +189,18 @@ class State:
                 return
             if "shutdown" in command_keys:
                 logging.info("Shutting down pi...")
-                os.system("sudo shutdown -h now")
+                os.system("shutdown -h now")
                 pass
             if "reboot" in command_keys:
                 logging.info("Rebooting pi...")
-                os.system("sudo shutdown -r now")
+                os.system("shutdown -r now")
                 pass
             if "exit" in command_keys:
                 logging.info("Stopping chpi...")
                 self.fsm.hw_relay.off()
                 self.fsm.ch_relay.off()
                 
-                os.system("sudo kill " + str(os.getpid()))
+                os.system("kill " + str(os.getpid()))
                 
                 pass
             if "reload" in command_keys:
@@ -232,6 +234,11 @@ class State:
     def process(self):
         
         #nextState = State(self.fsm)
+        
+        # We check to see if we can reach the default gateway
+        if not Gateway.pingGateway():
+            self.fsm.setState(NoGateway(self.fsm))
+            return
         
         # First we check the time to see if we should update
         current_time = datetime.now()
@@ -368,7 +375,8 @@ class BothState(State):
         # Change status led to inditate HW and CH are on
         self.fsm.setStatusLed(CHFSM.CH_AND_HW_COLOUR)
 
-class ScheduleIssue:
+# Represents a warning or issue with device. Will not look to schedule, but will respond to 
+class DeviceIssue:
     
     def __init__(self, fsm):
         self.fsm = fsm
@@ -410,7 +418,7 @@ class ScheduleIssue:
         
         
         
-class BadSchedule(ScheduleIssue):
+class BadSchedule(DeviceIssue):
     
     def __init__(self, fsm):
         self.fsm = fsm
@@ -436,7 +444,7 @@ class BadSchedule(ScheduleIssue):
         super().process()   
         
 
-class NoSchedule(ScheduleIssue):
+class NoSchedule(DeviceIssue):
     
     def __init__(self, fsm):
         self.fsm = fsm
@@ -458,6 +466,27 @@ class NoSchedule(ScheduleIssue):
         
         super().process()
 
+class NoGateway(DeviceIssue):
+    
+    def __init__(self, fsm):
+        self.fsm = fsm
+        
+    def enter(self):
+        logging.debug("No Gateway Enter")
+        logging.warning("Could not reach default gateway (ping failed)")
+        
+        # Change status led to inditate idle
+        self.fsm.setStatusLed(CHFSM.NO_GATEWAY_CONNECTION)
+        
+        super().enter()
+        
+    def process(self):
+        # Check to see if schedule file exists. If it does, change state to idle            
+        if Gateway.pingGateway():
+            self.fsm.setState(IdleState(self.fsm))
+            logging.info("Gateway ping succeeded")
+        
+        super().process()
 
 class Update:
     

@@ -2,5 +2,6 @@
 	- Add readme to project
 	- Properly close devices (pin devices, logger, etc.) on ALL possible program exits
 	- Config file?
-	- Remove newline from gateway function
 	- Asynchronously output console output from update and upgrade to log file (new line creates a new message)
+	- More rigorous wifi check (ping multiple times, check wifi card, etc.)
+	- Delete tmp file on exit

@@ -33,7 +33,7 @@ HW_SWITCH_PIN = "J8:36"
 CH_SWITCH_PIN = "J8:38"
 
 # Time, in seconds, between diag print calls
-DIAG_PRINT_DELAY = 5 * 60
+DIAG_PRINT_DELAY = 60 * 60
 
 # Time, in seconds, between infinite loop ticks
 TICK_DURATION = 0.1

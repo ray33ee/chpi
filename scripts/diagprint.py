@@ -18,7 +18,7 @@ class DiagPrint:
     def println():
         gateway = Gateway.gateway()
             
-        ping = PingServer(gateway).value
+        ping = Gateway.pingGateway()
         
         temp = CPUTemperature().temperature
         

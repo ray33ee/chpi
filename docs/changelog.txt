@@ -1,3 +1,11 @@
+Version 1.0.6
+	- 'sudo' removed from various shell calls
+	- Ping function added to gateway class
+	- Newline character removed from gateway function
+	- No gateway class added
+	- DiagPrint frequency changed to hourly
+	- tmp file no longer deleted during operation
+
 Version 1.0.5
 	- Emergency off state added to schedule (turns off CH to prevent it being left on at undesired hours)
 	- CH timer removed
