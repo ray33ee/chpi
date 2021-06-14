@@ -1,7 +1,15 @@
 
 	- Add readme to project
 	- Properly close devices (pin devices, logger, etc.) on ALL possible program exits
-	- Config file?
+	- Config file
+		- Contains logs folder path
 	- Asynchronously output console output from update and upgrade to log file (new line creates a new message)
 	- More rigorous wifi check (ping multiple times, check wifi card, etc.)
 	- Delete tmp file on exit
+	- Automatically create the 'logs' and 'files' folders if they don't exist
+	- Create variable in main.py that contains the path to the logs folder (so this may be customised more easily)
+	- Create script to load chpi
+		- Update and upgrade
+		- Prompt user to change password if it's raspberry (check hash)
+		- Download chpi repo and extract
+		- Make sure chpi starts on startup
