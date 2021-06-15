@@ -14,6 +14,10 @@ import json
 
 import os
 
+# Get properties from config file
+with open( os.path.join(os.path.join(os.path.dirname(os.path.dirname(__file__)), "scripts"), "config"), "r") as fp:
+    config = json.load(fp)
+
 class CHFSM:
     
     # Normal operation
@@ -32,8 +36,10 @@ class CHFSM:
     BLUETOOTH_MODE = (1.5, 1.5, (0,0,1), (0, 1, 1)) # blue to cyan
     UPDATING = (1.5, 1.5, (0, 0, 1), (0, 1, 0)) #blue to Green
     
+    update_time = config[r"update_time"]
+    
     # Update and reboot time (day_of_month, hour, minute, second)
-    UPDATE_REBOOT_TIME = (1, 0, 0, 0)
+    UPDATE_REBOOT_TIME = (update_time["day_of_month"], update_time["hour"], update_time["minute"], update_time["second"])
     
     PULSE_UP_TIME = 1.5
     PULSE_DOWN_TIME = 1.5
@@ -41,9 +47,11 @@ class CHFSM:
     BUTTON_BOUNCE_TIME = None
     
     # The duration of a CH or HW boost, in seconds
-    BOOST_DURATION = 60 * 15
+    BOOST_DURATION = config["boost_duration"]
     
     def __init__(self, red, green, blue, hw_relay, ch_relay, hw_button, ch_button, rgb_active_high, ch_relay_active_high, hw_relay_active_high):
+        
+        
         
         # Setup push buttons
         self.ch_button = BetterButton(ch_button, self.chPressed, self.BUTTON_BOUNCE_TIME, None, True)
@@ -55,11 +63,9 @@ class CHFSM:
 
         # Setup RGB status LED
         self.status_led = RGBLED(red, green, blue, active_high=rgb_active_high)
-        
-        self.files_folder_path = os.path.join(CHFSM.parent_folder(), "files")
 
-        self.commands_file_path = os.path.join(self.files_folder_path, "commands")
-        self.schedule_file_path = os.path.join(self.files_folder_path, "schedule")
+        self.commands_file_path = config["commands_path"]
+        self.schedule_file_path = config["schedule_path"]
         
         # Setup HW boost objects
         self.hw_boost_start = None

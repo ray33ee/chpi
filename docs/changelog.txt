@@ -1,3 +1,8 @@
+Version 1.0.7
+	- Various properties moved to config file
+	- config file and tmp file are moved to main.py root
+	- Modified .gitignore
+
 Version 1.0.6
 	- 'sudo' removed from various shell calls
 	- Ping function added to gateway class

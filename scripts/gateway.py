@@ -9,10 +9,12 @@ import csv
 
 from gpiozero import PingServer
 
+tmp_path = os.path.join(os.path.join(os.path.dirname(__file__), "tmp.txt"))
+
 class Gateway:
     
     def gateway():
-        tmp_path = os.path.join(os.path.join(os.path.dirname(os.path.dirname(__file__)), "files"), "tmp.txt")
+        
         
         os.system("route > " + tmp_path)
         

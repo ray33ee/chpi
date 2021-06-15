@@ -15,36 +15,43 @@ import os
 
 import signal
 
+import json
+
+from time import sleep
+
 ######## MUST BE STARTED WITH SUDO
+
+with open( os.path.join(os.path.join(CHFSM.parent_folder(), "scripts"), "config"), "r") as fp:
+    config = json.load(fp)
 
 # varsious Pi and circuit-specific constants
 RGB_ACTIVE_HIGH = False
 CH_RELAY_ACTIVE_HIGH = False
 HW_RELAY_ACTIVE_HIGH = False
 
-RED_LED_PIN = "J8:32"
-GREN_LED_PIN = "J8:35"
-BLUE_LED_PIN = "J8:33"
+RED_LED_PIN = config["rgb_red_pin"]
+GREEN_LED_PIN = config["rgb_green_pin"]
+BLUE_LED_PIN = config["rgb_blue_pin"]
 
-HW_RELAY_PIN = "J8:8"
-CH_RELAY_PIN = "J8:10"
+HW_RELAY_PIN = config["hw_relay_pin"]
+CH_RELAY_PIN = config["ch_relay_pin"]
 
-HW_SWITCH_PIN = "J8:36"
-CH_SWITCH_PIN = "J8:38"
+HW_SWITCH_PIN = config["hw_switch_pin"]
+CH_SWITCH_PIN = config["ch_switch_pin"]
 
 # Time, in seconds, between diag print calls
-DIAG_PRINT_DELAY = 60 * 60
+DIAG_PRINT_DELAY = config["diag_print_interval"]
 
 # Time, in seconds, between infinite loop ticks
 TICK_DURATION = 0.1
 
-log_filename = os.path.join(os.path.join(CHFSM.parent_folder(), "logs"), datetime.now().strftime("%Y-%m") + ".log")
+log_filename = os.path.join(os.path.normpath(config["log_path"]), datetime.now().strftime("%Y-%m") + ".log")
 
 logging.basicConfig(filename=log_filename, level=logging.DEBUG, format="%(asctime)s [%(levelname)s]: %(message)s", datefmt="%Y-%m-%d %a %H:%M:%S")
 
 logging.info("Application started")
 
-fsm = CHFSM(RED_LED_PIN, GREN_LED_PIN, BLUE_LED_PIN, HW_RELAY_PIN, CH_RELAY_PIN, HW_SWITCH_PIN, CH_SWITCH_PIN, RGB_ACTIVE_HIGH, CH_RELAY_ACTIVE_HIGH, HW_RELAY_ACTIVE_HIGH)
+fsm = CHFSM(RED_LED_PIN, GREEN_LED_PIN, BLUE_LED_PIN, HW_RELAY_PIN, CH_RELAY_PIN, HW_SWITCH_PIN, CH_SWITCH_PIN, RGB_ACTIVE_HIGH, CH_RELAY_ACTIVE_HIGH, HW_RELAY_ACTIVE_HIGH)
 
 def sigterm_handler(signum, frame):
     global fsm
@@ -91,7 +98,7 @@ except Exception as e:
     ch.off()
     
     # Put RGB LED on pulsing red
-    rgb_led = RGBLED(RED_LED_PIN, GREN_LED_PIN, BLUE_LED_PIN, active_high=RGB_ACTIVE_HIGH)
+    rgb_led = RGBLED(RED_LED_PIN, GREEN_LED_PIN, BLUE_LED_PIN, active_high=RGB_ACTIVE_HIGH)
     
     rgb_led.pulse(1.5, 1.5, on_color=(1, 0,0))
     

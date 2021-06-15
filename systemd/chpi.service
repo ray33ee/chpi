@@ -1,0 +1,10 @@
+[Unit]
+Description=Central heating and hot water control unit
+RequiresMountsFor=/media/pi/LOGS
+After=multi-user.target
+
+[Service]
+ExecStart=/bin/bash -c '/usr/bin/python3 /home/pi/Downloads/chpi-master/scripts/main.py > /home/pi/Downloads/chpi-master/systemd/stdinerr 2>&1'
+
+[Install]
+WantedBy=multi-user.target

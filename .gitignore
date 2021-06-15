@@ -1,3 +1,6 @@
-files
 logs
 scripts/__pycache__
+files/commands
+*.pyc
+scripts/tmp.txt
+systemd/stdinerr
