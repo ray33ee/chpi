@@ -14,6 +14,8 @@ import json
 
 import os
 
+last_gateway_ping = datetime.now()
+
 # Get properties from config file
 with open( os.path.join(os.path.join(os.path.dirname(os.path.dirname(__file__)), "scripts"), "config"), "r") as fp:
     config = json.load(fp)
@@ -77,6 +79,9 @@ class CHFSM:
         # Load first state
         self.state = IdleState(self)
         self.state.enter()
+        
+        # 
+        self.last_gateway_ping = datetime.now()
 
     def close(self):
         self.status_led.close()
@@ -242,7 +247,10 @@ class State:
         #nextState = State(self.fsm)
         
         # We check to see if we can reach the default gateway
-        if not Gateway.pingGateway():
+        if Gateway.pingGateway():
+            self.fsm.last_gateway_ping = datetime.now()
+        
+        if (datetime.now() - self.fsm.last_gateway_ping).seconds > 5 * 60:
             self.fsm.setState(NoGateway(self.fsm))
             return
         

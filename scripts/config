@@ -2,12 +2,12 @@
 	"rgb_red_pin": "J8:32",
 	"rgb_green_pin": "J8:35",
 	"rgb_blue_pin": "J8:33",
-	"hw_relay_pin": "J8:8",
-	"ch_relay_pin": "J8:10",
+	"hw_relay_pin": "J8:16",
+	"ch_relay_pin": "J8:18",
 	"hw_switch_pin": "J8:36",
 	"ch_switch_pin": "J8:38",
 	"diag_print_interval": 3600,
-	"log_path": "/media/pi/LOGS",
+	"log_path": "/home/pi/Downloads/chpi",
 	"update_time": {
 		"day_of_month": 1,
 		"hour": 0,
@@ -15,6 +15,6 @@
 		"second": 0
 	},
 	"boost_duration": 900,
-	"commands_path": "/home/pi/Downloads/chpi-master/files/commands",
-	"schedule_path": "/home/pi/Downloads/chpi-master/files/schedule"
+	"commands_path": "/home/pi/Downloads/chpi/files/commands",
+	"schedule_path": "/home/pi/Downloads/chpi/files/schedule"
 }

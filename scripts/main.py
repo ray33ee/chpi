@@ -42,6 +42,9 @@ CH_SWITCH_PIN = config["ch_switch_pin"]
 # Time, in seconds, between diag print calls
 DIAG_PRINT_DELAY = config["diag_print_interval"]
 
+while not os.path.exists(config["log_path"]):
+    sleep(0.5)
+
 # Time, in seconds, between infinite loop ticks
 TICK_DURATION = 0.1
 

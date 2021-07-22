@@ -1,3 +1,8 @@
+Version 1.0.8
+	- We now no longer log to the USB
+	- We only enter the `BadGateway` state if we go longer than 5 minutes between successful gateway pings
+	- HW and CH relay pins moved to allow use of UART for console-over-serial
+
 Version 1.0.7
 	- Various properties moved to config file
 	- config file and tmp file are moved to main.py root
